@@ -1,6 +1,8 @@
 using Gee;
 using Gdk;
 using Gtk;
+using GLib;
+using Xmpp;
 
 using Dino.Entities;
 
@@ -15,7 +17,10 @@ public class MainWindow : Adw.ApplicationWindow {
     [GtkChild] public Adw.NavigationSplitView navigation_split_view;
 
     [GtkChild] public MenuButton add_button;
+    [GtkChild] public MenuButton presence_button;
+    [GtkChild] public Image presence_button_icon;
     [GtkChild] public MenuButton menu_button;
+    [GtkChild] public ToggleButton people_panel_toggle_button;
 
     [GtkChild] public Adw.HeaderBar conversation_headerbar;
     [GtkChild] public Adw.WindowTitle conversation_window_title;
@@ -34,6 +39,8 @@ public class MainWindow : Adw.ApplicationWindow {
 
     private Database db;
     private Config config;
+    private StreamInteractor stream_interactor;
+    private string current_presence_show = Xmpp.Presence.Stanza.SHOW_ONLINE;
 
     class construct {
         var shortcut = new Shortcut(new KeyvalTrigger(Key.F, ModifierType.CONTROL_MASK), new CallbackAction((widget, args) => {
@@ -46,6 +53,7 @@ public class MainWindow : Adw.ApplicationWindow {
 
     public MainWindow(Application application, StreamInteractor stream_interactor, Database db, Config config) {
         Object(application : application);
+        this.stream_interactor = stream_interactor;
         this.db = db;
         this.config = config;
 
@@ -57,6 +65,13 @@ public class MainWindow : Adw.ApplicationWindow {
 
         conversation_selector.init(stream_interactor);
         conversation_selector.conversation_selected.connect_after(() => { navigation_split_view.show_content = true; });
+        people_panel_toggle_button.toggled.connect(() => {
+            conversation_selector.set_people_panel_enabled(people_panel_toggle_button.active);
+        });
+        setup_presence_selector();
+        stream_interactor.stream_negotiated.connect((account, stream) => {
+            apply_presence_show_for_account(account);
+        });
 
         global_search = new GlobalSearch(stream_interactor);
         search_frame.set_child(global_search.get_widget());
@@ -144,6 +159,60 @@ public class MainWindow : Adw.ApplicationWindow {
         Builder menu_builder = new Builder.from_resource("/im/dino/Dino/menu_app.ui");
         MenuModel menu_menu_model = menu_builder.get_object("menu_app") as MenuModel;
         menu_button.set_menu_model(menu_menu_model);
+    }
+
+    private void setup_presence_selector() {
+        var status_menu = new Menu();
+        status_menu.append(_("Online"), "win.set-presence-show('online')");
+        status_menu.append(_("Free for Chat"), "win.set-presence-show('chat')");
+        status_menu.append(_("Away"), "win.set-presence-show('away')");
+        status_menu.append(_("Extended Away"), "win.set-presence-show('xa')");
+        status_menu.append(_("Do Not Disturb"), "win.set-presence-show('dnd')");
+        presence_button.set_menu_model(status_menu);
+
+        var set_presence_action = new SimpleAction("set-presence-show", VariantType.STRING);
+        set_presence_action.activate.connect((parameter) => {
+            if (parameter == null) return;
+            apply_presence_show(parameter.get_string());
+        });
+        add_action(set_presence_action);
+
+        update_presence_button_icon();
+    }
+
+    private void apply_presence_show(string show) {
+        current_presence_show = show;
+        update_presence_button_icon();
+
+        foreach (Account account in stream_interactor.get_accounts()) {
+            apply_presence_show_for_account(account);
+        }
+    }
+
+    private void apply_presence_show_for_account(Account account) {
+        XmppStream? stream = stream_interactor.get_stream(account);
+        if (stream == null) return;
+
+        Xmpp.Presence.Stanza presence = new Xmpp.Presence.Stanza();
+        presence.show = current_presence_show;
+        stream.get_module(Xmpp.Presence.Module.IDENTITY).send_presence(stream, presence);
+    }
+
+    private void update_presence_button_icon() {
+        string icon_name = "dino-status-online";
+        switch (current_presence_show) {
+            case Xmpp.Presence.Stanza.SHOW_DND:
+                icon_name = "dino-status-dnd";
+                break;
+            case Xmpp.Presence.Stanza.SHOW_CHAT:
+                icon_name = "dino-status-chat";
+                break;
+            case Xmpp.Presence.Stanza.SHOW_AWAY:
+            case Xmpp.Presence.Stanza.SHOW_XA:
+                icon_name = "dino-status-away";
+                break;
+        }
+        presence_button_icon.icon_name = icon_name;
     }
 }
 

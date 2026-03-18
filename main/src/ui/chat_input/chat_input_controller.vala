@@ -105,9 +105,10 @@ public class ChatInputController : Object {
     private void on_encryption_changed(Encryption encryption) {
         reset_input_field_status();
 
-        if (encryption == Encryption.NONE) return;
+        if (encryption == Encryption.NONE || encryption == Encryption.UNKNOWN) return;
 
         Application app = GLib.Application.get_default() as Application;
+        if (!app.plugin_registry.encryption_list_entries.has_key(encryption)) return;
         var encryption_entry = app.plugin_registry.encryption_list_entries[encryption];
         encryption_entry.encryption_activated(conversation, set_input_field_status);
     }

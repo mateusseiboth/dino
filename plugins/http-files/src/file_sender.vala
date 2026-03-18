@@ -100,16 +100,26 @@ public class HttpFileSender : FileSender, Object {
     }
 
     public async bool can_send(Conversation conversation, FileTransfer file_transfer) {
-        if (!max_file_sizes.has_key(conversation.account)) return false;
-
-        return file_transfer.size < max_file_sizes[conversation.account];
+        long max_size = yield get_file_size_limit(conversation);
+        if (max_size < 0) return false;
+        return file_transfer.size <= max_size;
     }
 
     public async long get_file_size_limit(Conversation conversation) {
-        long? max_size = max_file_sizes[conversation.account];
-        if (max_size != null) {
-            return max_size;
+        lock (max_file_sizes) {
+            if (max_file_sizes.has_key(conversation.account)) {
+                long max_size = max_file_sizes[conversation.account];
+                // Some servers don't expose max-file-size; avoid treating 0 as a hard block.
+                return max_size > 0 ? max_size : long.MAX;
+            }
         }
+
+        XmppStream? stream = stream_interactor.get_stream(conversation.account);
+        if (stream != null && stream.get_flag(Xmpp.Xep.HttpFileUpload.Flag.IDENTITY) != null) {
+            // Service is known but limit is unknown.
+            return long.MAX;
+        }
+
         return -1;
     }
 
@@ -119,8 +129,13 @@ public class HttpFileSender : FileSender, Object {
 
     public async bool is_upload_available(Conversation conversation) {
         lock (max_file_sizes) {
-            return max_file_sizes.has_key(conversation.account);
+            if (max_file_sizes.has_key(conversation.account)) {
+                return true;
+            }
         }
+
+        XmppStream? stream = stream_interactor.get_stream(conversation.account);
+        return stream != null && stream.get_flag(Xmpp.Xep.HttpFileUpload.Flag.IDENTITY) != null;
     }
 
 #if !SOUP_3_0
@@ -173,7 +188,7 @@ public class HttpFileSender : FileSender, Object {
     private void on_stream_negotiated(Account account, XmppStream stream) {
         stream_interactor.module_manager.get_module(account, Xmpp.Xep.HttpFileUpload.Module.IDENTITY).feature_available.connect((stream, max_file_size) => {
             lock (max_file_sizes) {
-                max_file_sizes[account] = max_file_size;
+                max_file_sizes[account] = max_file_size > 0 ? max_file_size : long.MAX;
             }
             upload_available(account);
         });

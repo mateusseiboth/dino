@@ -141,15 +141,11 @@ public class JingleFileSender : FileSender, Object {
     public async bool is_upload_available(Conversation conversation) {
         if (conversation.type_ != Conversation.Type.CHAT) return false;
 
-        JingleFileEncryptionHelper? helper = JingleFileHelperRegistry.instance.get_encryption_helper(conversation.encryption);
-        if (helper == null) return false;
-        if (!helper.can_transfer(conversation)) return false;
-
         XmppStream? stream = stream_interactor.get_stream(conversation.account);
         if (stream == null) return false;
 
         Gee.List<Jid>? resources = stream.get_flag(Presence.Flag.IDENTITY).get_resources(conversation.counterpart);
-        if (resources == null) return false;
+        if (resources == null || resources.size == 0) return false;
 
         foreach (Jid full_jid in resources) {
             if (yield stream.get_module(Xep.JingleFileTransfer.Module.IDENTITY).is_available(stream, full_jid)) {
@@ -195,15 +191,18 @@ public class JingleFileSender : FileSender, Object {
         if (stream == null) throw new FileSendError.UPLOAD_FAILED("No stream available");
         JingleFileEncryptionHelper? helper = JingleFileHelperRegistry.instance.get_encryption_helper(file_transfer.encryption);
         bool must_encrypt = helper != null && yield helper.can_encrypt(conversation, file_transfer);
+        string last_error = "No compatible online resource";
         // TODO(hrxi): Prioritization of transports (and resources?).
         foreach (Jid full_jid in stream.get_flag(Presence.Flag.IDENTITY).get_resources(conversation.counterpart)) {
             if (full_jid.equals(stream.get_flag(Bind.Flag.IDENTITY).my_jid)) {
                 continue;
             }
             if (!yield stream.get_module(Xep.JingleFileTransfer.Module.IDENTITY).is_available(stream, full_jid)) {
+                last_error = "Peer resource does not advertise Jingle file transfer";
                 continue;
             }
             if (must_encrypt && !yield helper.can_encrypt(conversation, file_transfer, full_jid)) {
+                last_error = "No encryption support on online resource";
                 continue;
             }
             string? precondition_name = null;
@@ -218,10 +217,13 @@ public class JingleFileSender : FileSender, Object {
             try {
                 yield stream.get_module(Xep.JingleFileTransfer.Module.IDENTITY).offer_file_stream(stream, full_jid, file_transfer.input_stream, file_transfer.server_file_name, file_meta.size, precondition_name, precondition_options);
             } catch (Error e) {
-                throw new FileSendError.UPLOAD_FAILED(@"offer_file_stream failed: $(e.message)");
+                last_error = e.message;
+                continue;
             }
             return;
         }
+
+        throw new FileSendError.UPLOAD_FAILED(@"offer_file_stream failed for all resources: $last_error");
     }
 
     public int get_id() { return 1; }

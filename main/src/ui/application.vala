@@ -38,6 +38,9 @@ public class Dino.Ui.Application : Adw.Application, Dino.Application {
         add_main_option_entries(options);
 
         startup.connect(() => {
+            apply_theme_preference();
+            settings.notify["dark-theme"].connect(apply_theme_preference);
+
             if (print_version) {
                 print(@"Dino $(Dino.get_version())\n");
                 Process.exit(0);
@@ -69,6 +72,8 @@ public class Dino.Ui.Application : Adw.Application, Dino.Application {
         });
 
         activate.connect(() => {
+            apply_theme_preference();
+
             if (window == null) {
                 controller = new MainWindowController(this, stream_interactor, db);
                 config = new Config(db);
@@ -78,6 +83,11 @@ public class Dino.Ui.Application : Adw.Application, Dino.Application {
             }
             window.present();
         });
+    }
+
+    private void apply_theme_preference() {
+        var style_manager = Adw.StyleManager.get_default();
+        style_manager.set_color_scheme(settings.dark_theme ? Adw.ColorScheme.FORCE_DARK : Adw.ColorScheme.FORCE_LIGHT);
     }
 
     public void handle_uri(string jid, string query, Gee.Map<string, string> options) {

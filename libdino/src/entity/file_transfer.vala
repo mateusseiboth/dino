@@ -36,7 +36,11 @@ public class FileTransfer : Object {
     public InputStream input_stream {
         get {
             if (input_stream_ == null) {
-                File file = File.new_for_path(Path.build_filename(storage_dir, path ?? file_name));
+                string resolved_path = path ?? file_name;
+                if (path == null || !Path.is_absolute(path)) {
+                    resolved_path = Path.build_filename(storage_dir, resolved_path);
+                }
+                File file = File.new_for_path(resolved_path);
                 try {
                     input_stream_ = file.read();
                 } catch (Error e) { }
@@ -257,6 +261,9 @@ public class FileTransfer : Object {
 
     public File? get_file() {
         if (path == null) return null;
+        if (Path.is_absolute(path)) {
+            return File.new_for_path(path);
+        }
         return File.new_for_path(Path.build_filename(Dino.get_storage_dir(), "files", path));
     }
 

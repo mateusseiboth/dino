@@ -85,6 +85,29 @@ public class RosterStoreImpl : Roster.Storage, Object {
     private Database db;
 
     private HashMap<Jid, Roster.Item> items = new HashMap<Jid, Roster.Item>(Jid.hash_bare_func, Jid.equals_bare_func);
+    private const string GROUPS_SEPARATOR = "\x1f";
+
+    private static string serialize_groups(Roster.Item item) {
+        var groups = new ArrayList<string>();
+        foreach (StanzaNode node in item.stanza_node.sub_nodes) {
+            if (node.name != "group") continue;
+            string? group_name = node.get_string_content();
+            if (group_name == null || group_name.strip() == "") continue;
+            groups.add(group_name.strip());
+        }
+        return string.joinv(GROUPS_SEPARATOR, groups.to_array());
+    }
+
+    private static void restore_groups(Roster.Item item, string? serialized_groups) {
+        if (serialized_groups == null || serialized_groups == "") return;
+        string item_ns = item.stanza_node.ns_uri ?? "jabber:iq:roster";
+
+        foreach (string group_name in serialized_groups.split(GROUPS_SEPARATOR)) {
+            if (group_name.strip() == "") continue;
+            item.stanza_node.put_node(new StanzaNode.build("group", item_ns)
+                .put_node(new StanzaNode.text(group_name)));
+        }
+    }
 
     public RosterStoreImpl(Account account, Database db) {
         this.account = account;
@@ -96,6 +119,7 @@ public class RosterStoreImpl : Roster.Storage, Object {
                 item.jid = new Jid(row[db.roster.jid]);
                 item.name = row[db.roster.handle];
                 item.subscription = row[db.roster.subscription];
+                restore_groups(item, row[db.roster.groups]);
                 items[item.jid] = item;
             } catch (InvalidJidError e) {
                 warning("Ignoring roster entry with invalid Jid: %s", e.message);
@@ -134,6 +158,7 @@ public class RosterStoreImpl : Roster.Storage, Object {
             .value(db.roster.handle, item.name)
             .value(db.roster.subscription, item.subscription)
             .value(db.roster.ask, item.ask)
+            .value(db.roster.groups, serialize_groups(item))
             .perform();
     }
 

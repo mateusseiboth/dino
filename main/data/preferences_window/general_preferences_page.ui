@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-  <requires lib="gtk" version="4.0"/>
+  <requires lib="gtk" version="4.0" />
   <template class="DinoUiGeneralPreferencesPage" parent="AdwPreferencesPage">
     <child>
       <object class="AdwPreferencesGroup">
@@ -20,6 +20,13 @@
     </child>
     <child>
       <object class="AdwPreferencesGroup">
+        <child>
+          <object class="AdwSwitchRow" id="dark_theme_row">
+            <property name="title" translatable="yes">Use _Dark Theme</property>
+            <property name="subtitle" translatable="yes">Toggle between dark and light appearance</property>
+            <property name="use-underline">True</property>
+          </object>
+        </child>
         <child>
           <object class="AdwSwitchRow" id="notification_row">
             <property name="title" translatable="yes">_Notifications</property>

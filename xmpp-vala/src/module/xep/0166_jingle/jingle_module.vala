@@ -104,7 +104,7 @@ namespace Xmpp.Xep.Jingle {
 
         public async Session create_session(XmppStream stream, Gee.List<Content> contents, Jid receiver_full_jid, string? sid = null, Jid? muji_room = null) throws Error {
             if (!yield is_jingle_available(stream, receiver_full_jid)) {
-                throw new Error.NO_SHARED_PROTOCOLS("No Jingle support");
+                warning("Jingle capability not advertised for %s, trying session-initiate anyway", receiver_full_jid.to_string());
             }
             Jid? my_jid = stream.get_flag(Bind.Flag.IDENTITY).my_jid;
             if (my_jid == null) {

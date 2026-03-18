@@ -30,7 +30,8 @@ public class Register : StreamInteractionModule, Object{
         list.add(new Sasl.Module(account.bare_jid.to_string(), account.password));
 
         XmppStreamResult stream_result = yield Xmpp.establish_stream(account.bare_jid.domain_jid, list, Application.print_xmpp,
-                (peer_cert, errors) => { return ConnectionManager.on_invalid_certificate(account.domainpart, peer_cert, errors); }
+            (peer_cert, errors) => { return ConnectionManager.on_invalid_certificate(account.domainpart, peer_cert, errors, account.allow_invalid_tls_certificate); },
+            account.allow_invalid_tls_certificate
         );
 
         if (stream_result.stream == null) {
@@ -82,14 +83,15 @@ public class Register : StreamInteractionModule, Object{
         public TlsCertificateFlags? error_flags { get; set; }
     }
 
-    public static async ServerAvailabilityReturn check_server_availability(Jid jid) {
+    public static async ServerAvailabilityReturn check_server_availability(Jid jid, bool allow_invalid_tls_certificate = false) {
         ServerAvailabilityReturn ret = new ServerAvailabilityReturn() { available=false };
 
         Gee.List<XmppStreamModule> list = new ArrayList<XmppStreamModule>();
         list.add(new Iq.Module());
 
         XmppStreamResult stream_result = yield Xmpp.establish_stream(jid.domain_jid, list, Application.print_xmpp,
-                (peer_cert, errors) => { return ConnectionManager.on_invalid_certificate(jid.domainpart, peer_cert, errors); }
+            (peer_cert, errors) => { return ConnectionManager.on_invalid_certificate(jid.domainpart, peer_cert, errors, allow_invalid_tls_certificate); },
+            allow_invalid_tls_certificate
         );
 
         if (stream_result.stream == null) {
@@ -135,7 +137,7 @@ public class Register : StreamInteractionModule, Object{
         public TlsCertificateFlags? error_flags { get; set; }
     }
 
-    public static async RegistrationFormReturn get_registration_form(Jid jid) {
+    public static async RegistrationFormReturn get_registration_form(Jid jid, bool allow_invalid_tls_certificate = false) {
         RegistrationFormReturn ret = new RegistrationFormReturn();
 
         Gee.List<XmppStreamModule> list = new ArrayList<XmppStreamModule>();
@@ -144,7 +146,8 @@ public class Register : StreamInteractionModule, Object{
         list.add(new Xep.BitsOfBinary.Module());
 
         XmppStreamResult stream_result = yield Xmpp.establish_stream(jid.domain_jid, list, Application.print_xmpp,
-                (peer_cert, errors) => { return ConnectionManager.on_invalid_certificate(jid.domainpart, peer_cert, errors); }
+            (peer_cert, errors) => { return ConnectionManager.on_invalid_certificate(jid.domainpart, peer_cert, errors, allow_invalid_tls_certificate); },
+            allow_invalid_tls_certificate
         );
 
         if (stream_result.stream == null) {
@@ -189,13 +192,14 @@ public class Register : StreamInteractionModule, Object{
         return ret;
     }
 
-    public static async string? submit_form(Jid jid, Xep.InBandRegistration.Form form) {
+    public static async string? submit_form(Jid jid, Xep.InBandRegistration.Form form, bool allow_invalid_tls_certificate = false) {
         Gee.List<XmppStreamModule> list = new ArrayList<XmppStreamModule>();
         list.add(new Iq.Module());
         list.add(new Xep.InBandRegistration.Module());
 
         XmppStreamResult stream_result = yield Xmpp.establish_stream(jid.domain_jid, list, Application.print_xmpp,
-                (peer_cert, errors) => { return ConnectionManager.on_invalid_certificate(jid.domainpart, peer_cert, errors); }
+            (peer_cert, errors) => { return ConnectionManager.on_invalid_certificate(jid.domainpart, peer_cert, errors, allow_invalid_tls_certificate); },
+            allow_invalid_tls_certificate
         );
 
         if (stream_result.stream == null) {

@@ -218,19 +218,31 @@ public class ConversationViewController : Object {
         FileSendOverlay file_send_overlay = new FileSendOverlay(file, file_info);
         file_send_overlay.send_file.connect(send_file);
 
-        stream_interactor.get_module(FileManager.IDENTITY).get_file_size_limits.begin(conversation, (_, res) => {
-            HashMap<int, long> limits = stream_interactor.get_module(FileManager.IDENTITY).get_file_size_limits.end(res);
-            bool something_works = false;
-            foreach (var limit in limits.values) {
-                if (limit >= file_info.get_size()) {
-                    something_works = true;
-                }
+        stream_interactor.get_module(FileManager.IDENTITY).is_upload_available.begin(conversation, (_, available_res) => {
+            bool upload_available = stream_interactor.get_module(FileManager.IDENTITY).is_upload_available.end(available_res);
+            if (!upload_available) {
+                return;
             }
-            if (!something_works && limits.has_key(0)) {
-                if (!something_works && file_info.get_size() > limits[0] && file_send_overlay != null) {
+
+            stream_interactor.get_module(FileManager.IDENTITY).get_file_size_limits.begin(conversation, (_, res) => {
+                HashMap<int, long> limits = stream_interactor.get_module(FileManager.IDENTITY).get_file_size_limits.end(res);
+                bool has_known_limit = false;
+                bool something_works = false;
+                foreach (var limit in limits.values) {
+                    // Ignore senders with unknown/invalid limits.
+                    if (limit <= 0) {
+                        continue;
+                    }
+                    has_known_limit = true;
+                    if (limit >= file_info.get_size()) {
+                        something_works = true;
+                        break;
+                    }
+                }
+                if (has_known_limit && !something_works && file_send_overlay != null) {
                     file_send_overlay.set_file_too_large();
                 }
-            }
+            });
         });
 
         file_send_overlay.closed.connect(() => {

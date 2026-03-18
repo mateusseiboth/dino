@@ -137,13 +137,8 @@ public static bool is_dark_theme(Gtk.Widget widget) {
 private static int8 is24h = 0;
 public static bool is_24h_format() {
     if (is24h == 0) {
-        Regex has_ampm = /(^|[^%])%[pP]/;
-        Regex has_t_fmt_ampm = /(^|[^%])%r/;
-        unowned string t_fmt = Posix.nl_langinfo(Posix.NLItem.T_FMT);
-        unowned string t_fmt_ampm = Posix.nl_langinfo(Posix.NLItem.T_FMT_AMPM);
-        bool has_am_str = Posix.nl_langinfo(Posix.NLItem.AM_STR).strip() != "";
-        bool has_pm_str = Posix.nl_langinfo(Posix.NLItem.PM_STR).strip() != "";
-        is24h = ((has_ampm.match(t_fmt) || has_t_fmt_ampm.match(t_fmt) && has_ampm.match(t_fmt_ampm)) && (has_am_str || has_pm_str)) ? -1 : 1;
+    // Keep formatting deterministic across platforms.
+    is24h = 1;
     }
     return is24h == 1;
 }

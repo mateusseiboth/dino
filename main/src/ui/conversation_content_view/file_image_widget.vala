@@ -207,6 +207,7 @@ public class FileImageWidget : Widget {
     }
 
     public void on_image_clicked(GestureClick gesture_click_controller, int n_press, double x, double y) {
+        if (this.file_transfer == null) return;
         if (this.file_transfer.state != COMPLETE) return;
 
         switch (gesture_click_controller.get_device().source) {

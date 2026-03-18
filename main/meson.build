@@ -141,7 +141,35 @@ endif
 if meson.get_compiler('vala').version().version_compare('=0.56.12')
     vala_args += ['-D', 'VALA_0_56_12']
 endif
-exe_dino = executable('dino', sources, c_args: c_args, vala_args: vala_args, dependencies: dependencies, install: true, install_rpath: default_install_rpath)
+
+exe_dino = executable(
+    'dino',
+    sources,
+    c_args: c_args,
+    vala_args: vala_args,
+    dependencies: dependencies,
+    install: true,
+    install_rpath: default_install_rpath,
+    win_subsystem: host_machine.system() == 'windows' ? 'windows' : 'console',
+)
+
+if host_machine.system() == 'windows'
+    executable(
+        'dino-console',
+        sources,
+        c_args: c_args,
+        vala_args: vala_args,
+        dependencies: dependencies,
+        install: false,
+        win_subsystem: 'console',
+    )
+    executable(
+        'dino-toast',
+        'src/windows/toast_helper.c',
+        install: false,
+        win_subsystem: 'windows',
+    )
+endif
 
 install_data('data/icons/scalable/apps/im.dino.Dino-symbolic.svg', install_dir: get_option('datadir') / 'icons/hicolor/symbolic/apps')
 install_data('data/icons/scalable/apps/im.dino.Dino.svg', install_dir: get_option('datadir') / 'icons/hicolor/scalable/apps')

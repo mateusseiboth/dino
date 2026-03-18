@@ -13,7 +13,7 @@ namespace Xmpp {
         public IOError? io_error { get; set; }
     }
 
-    public async XmppStreamResult establish_stream(Jid bare_jid, Gee.List<XmppStreamModule> modules, string? log_options, owned TlsXmppStream.OnInvalidCert on_invalid_cert) {
+    public async XmppStreamResult establish_stream(Jid bare_jid, Gee.List<XmppStreamModule> modules, string? log_options, owned TlsXmppStream.OnInvalidCert on_invalid_cert, bool allow_insecure_plaintext = false) {
         Jid remote = bare_jid.domain_jid;
         TlsXmppStream.OnInvalidCertWrapper on_invalid_cert_wrapper = new TlsXmppStream.OnInvalidCertWrapper(on_invalid_cert);
 
@@ -60,7 +60,7 @@ namespace Xmpp {
         foreach (SrvTargetInfo target in targets) {
             try {
                 if (target.service == "xmpp-client") {
-                    stream = new StartTlsXmppStream(remote, target.host, target.port, on_invalid_cert_wrapper);
+                    stream = new StartTlsXmppStream(remote, target.host, target.port, on_invalid_cert_wrapper, allow_insecure_plaintext);
                 } else {
                     stream = new DirectTlsXmppStream(remote, target.host, target.port, on_invalid_cert_wrapper);
                 }

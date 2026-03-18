@@ -14,6 +14,7 @@ public class Dino.Ui.AccountPreferencesSubpage : Adw.NavigationPage {
     [GtkChild] public unowned Adw.EntryRow local_alias;
     [GtkChild] public unowned Adw.ActionRow password_change;
     [GtkChild] public unowned Adw.ActionRow connection_status;
+    [GtkChild] public unowned Adw.SwitchRow allow_invalid_tls_certificate;
     [GtkChild] public unowned Button enter_password_button;
     [GtkChild] public unowned Box avatar_menu_box;
     [GtkChild] public unowned Button edit_avatar_button;
@@ -28,6 +29,7 @@ public class Dino.Ui.AccountPreferencesSubpage : Adw.NavigationPage {
     private Binding[] bindings = new Binding[0];
     private ulong[] account_notify_ids = new ulong[0];
     private ulong alias_entry_changed = 0;
+    private ulong allow_invalid_tls_certificate_notify = 0;
 
     construct {
         title = "Account";
@@ -80,6 +82,20 @@ public class Dino.Ui.AccountPreferencesSubpage : Adw.NavigationPage {
                 local_alias.text = account.alias ?? "";
                 alias_entry_changed = local_alias.changed.connect(() => {
                     account.alias = local_alias.text;
+                });
+
+                if (allow_invalid_tls_certificate_notify != 0) {
+                    allow_invalid_tls_certificate.disconnect(allow_invalid_tls_certificate_notify);
+                }
+                allow_invalid_tls_certificate.active = account.allow_invalid_tls_certificate;
+                allow_invalid_tls_certificate_notify = allow_invalid_tls_certificate.notify["active"].connect(() => {
+                    bool new_value = allow_invalid_tls_certificate.active;
+                    if (account.allow_invalid_tls_certificate == new_value) return;
+
+                    account.allow_invalid_tls_certificate = new_value;
+                    if (account.enabled) {
+                        model.reconnect_account(account);
+                    }
                 });
 
                 bindings += account.bind_property("enabled", disable_account_button, "label", BindingFlags.SYNC_CREATE, (binding, from, ref to) => {

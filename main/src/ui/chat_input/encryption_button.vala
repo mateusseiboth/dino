@@ -27,6 +27,10 @@ public class EncryptionButton {
         unencrypted_item.set_action_and_target_value("enc.encryption", new Variant.int32(Encryption.NONE));
         menu_model.append_item(unencrypted_item);
 
+        MenuItem aes_item = new MenuItem(_("Encrypted (AES)"), "enc.encryption");
+        aes_item.set_action_and_target_value("enc.encryption", new Variant.int32(Encryption.UNKNOWN));
+        menu_model.append_item(aes_item);
+
         var encryption_entries = new ArrayList<Plugins.EncryptionListEntry>();
         Application app = GLib.Application.get_default() as Application;
         encryption_entries.add_all(app.plugin_registry.encryption_list_entries.values);

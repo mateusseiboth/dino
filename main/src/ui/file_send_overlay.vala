@@ -60,6 +60,13 @@ public class FileSendOverlay : Adw.Dialog {
         send_button.sensitive = false;
         can_send = false;
     }
+
+    public void set_upload_unavailable() {
+        info_label.label = _("File upload is currently unavailable for this conversation.");
+        Util.force_error_color(info_label);
+        send_button.sensitive = false;
+        can_send = false;
+    }
 }
 
 }

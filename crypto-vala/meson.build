@@ -2,15 +2,17 @@ dependencies = [
     dep_gio,
     dep_glib,
     dep_libgcrypt,
-    dep_libsrtp2,
 ]
 sources = files(
     'src/cipher.vala',
     'src/cipher_converter.vala',
     'src/error.vala',
     'src/random.vala',
-    'src/srtp.vala',
 )
+if dep_libsrtp2.found()
+    dependencies += [dep_libsrtp2]
+    sources += files('src/srtp.vala')
+endif
 c_args = [
     '-DG_LOG_DOMAIN="crypto-vala"',
 ]

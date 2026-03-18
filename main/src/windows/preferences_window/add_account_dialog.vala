@@ -29,6 +29,7 @@ public class AddAccountDialog : Adw.Dialog {
     [GtkChild] private unowned Box sign_in_box;
     [GtkChild] private unowned Label sign_in_error_label;
     [GtkChild] private unowned Adw.EntryRow jid_entry;
+    [GtkChild] private unowned Adw.SwitchRow sign_in_allow_invalid_tls;
     [GtkChild] private unowned Adw.PreferencesGroup password_group;
     [GtkChild] private unowned Adw.PasswordEntryRow password_entry;
     [GtkChild] private unowned Button sign_in_continue_button;
@@ -212,6 +213,7 @@ public class AddAccountDialog : Adw.Dialog {
                 // JID + Psw fields were visible: Try to log in
                 string password = password_entry.text;
                 Account account = new Account(login_jid, password);
+                account.allow_invalid_tls_certificate = sign_in_allow_invalid_tls.active;
 
                 ConnectionManager.ConnectionError.Source? error = yield stream_interactor.get_module(Register.IDENTITY).add_check_account(account);
                 sign_in_continue_spinner.visible = false;
@@ -233,7 +235,7 @@ public class AddAccountDialog : Adw.Dialog {
                 }
             } else {
                 // Only JID field was visible: Check if server exists
-                Register.ServerAvailabilityReturn server_status = yield Register.check_server_availability(login_jid);
+                Register.ServerAvailabilityReturn server_status = yield Register.check_server_availability(login_jid, sign_in_allow_invalid_tls.active);
                 sign_in_continue_spinner.visible = false;
                 sign_in_continue_button.sensitive = true;
                 if (server_status.available) {
@@ -278,7 +280,7 @@ public class AddAccountDialog : Adw.Dialog {
 
     private async void request_show_register_form(Jid server_jid) {
         select_server_continue_spinner.visible = true;
-        Register.RegistrationFormReturn form_return = yield Register.get_registration_form(server_jid);
+        Register.RegistrationFormReturn form_return = yield Register.get_registration_form(server_jid, sign_in_allow_invalid_tls.active);
         if (select_server_continue_spinner == null) {
             return;
         }
@@ -337,7 +339,7 @@ public class AddAccountDialog : Adw.Dialog {
         }
 
         register_form_continue_spinner.visible = true;
-        string? error = yield Register.submit_form(server_jid, form);
+        string? error = yield Register.submit_form(server_jid, form, sign_in_allow_invalid_tls.active);
         if (register_form_continue_spinner == null) {
             return;
         }
@@ -352,6 +354,7 @@ public class AddAccountDialog : Adw.Dialog {
             }
             try {
                 Account account = new Account(new Jid.components(username, server_jid.domainpart, null), password);
+                account.allow_invalid_tls_certificate = sign_in_allow_invalid_tls.active;
                 add_activate_account(account);
                 show_success(account);
             } catch (InvalidJidError e) {

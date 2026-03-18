@@ -15,6 +15,7 @@ version_vala = vcs_tag(command: command, input: 'src/version.vala.in', output: '
 
 # libdino
 dependencies = [
+    dep_crypto_vala,
     dep_gdk_pixbuf,
     dep_gee,
     dep_gio,
@@ -58,6 +59,7 @@ sources = files(
     'src/service/file_transfer_storage.vala',
     'src/service/history_sync.vala',
     'src/service/jingle_file_transfers.vala',
+    'src/service/legacy_si_file_transfers.vala',
     'src/service/message_correction.vala',
     'src/service/message_deletion.vala',
     'src/service/message_processor.vala',
@@ -79,6 +81,7 @@ sources = files(
     'src/util/display_name.vala',
     'src/util/limit_input_stream.vala',
     'src/util/send_message.vala',
+    'src/util/text_crypto.vala',
     'src/util/util.vala',
     'src/util/weak_map.vala',
     'src/util/weak_timeout.vala',

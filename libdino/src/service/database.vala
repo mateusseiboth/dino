@@ -7,7 +7,7 @@ using Dino.Entities;
 namespace Dino {
 
 public class Database : Qlite.Database {
-    private const int VERSION = 30;
+    private const int VERSION = 31;
 
     public class AccountTable : Table {
         public Column<int> id = new Column.Integer("id") { primary_key = true, auto_increment = true };
@@ -360,10 +360,11 @@ public class Database : Qlite.Database {
         public Column<string> handle = new Column.Text("name");
         public Column<string> subscription = new Column.Text("subscription");
         public Column<string> ask = new Column.Text("ask") { min_version=29 };
+        public Column<string> groups = new Column.Text("groups") { min_version=31 };
 
         internal RosterTable(Database db) {
             base(db, "roster");
-            init({account_id, jid, handle, subscription, ask});
+            init({account_id, jid, handle, subscription, ask, groups});
             unique({account_id, jid}, "IGNORE");
         }
     }

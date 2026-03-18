@@ -36,13 +36,23 @@ public class FileManager : StreamInteractionModule, Object {
         return Path.build_filename(Dino.get_storage_dir(), "files");
     }
 
+    public static string get_downloads_dir() {
+        string? downloads_dir = Environment.get_user_special_dir(UserDirectory.DOWNLOAD);
+        if (downloads_dir == null || downloads_dir.strip() == "") {
+            downloads_dir = Path.build_filename(Environment.get_home_dir(), "Downloads");
+        }
+        return Path.build_filename(downloads_dir, "dino");
+    }
+
     private FileManager(StreamInteractor stream_interactor, Database db) {
         this.stream_interactor = stream_interactor;
         this.db = db;
         DirUtils.create_with_parents(get_storage_dir(), 0700);
 
         this.add_provider(new JingleFileProvider(stream_interactor));
+        this.add_provider(new LegacySiFileProvider(stream_interactor));
         this.add_sender(new JingleFileSender(stream_interactor));
+        this.add_sender(new LegacySiFileSender(stream_interactor));
         this.add_metadata_provider(new GenericFileMetadataProvider());
         this.add_metadata_provider(new ImageFileMetadataProvider());
     }
@@ -114,9 +124,17 @@ public class FileManager : StreamInteractionModule, Object {
 
             FileSender file_sender = null;
             FileEncryptor file_encryptor = null;
+            var sender_diagnostics = new ArrayList<string>();
             foreach (FileSender sender in file_senders) {
-                if (yield sender.can_send(conversation, file_transfer)) {
-                    if (file_transfer.encryption == Encryption.NONE || yield sender.can_encrypt(conversation, file_transfer)) {
+                bool upload_available = yield sender.is_upload_available(conversation);
+                long size_limit = yield sender.get_file_size_limit(conversation);
+                bool can_send = yield sender.can_send(conversation, file_transfer);
+                bool sender_can_encrypt = file_transfer.encryption == Encryption.NONE ? true : (yield sender.can_encrypt(conversation, file_transfer));
+
+                sender_diagnostics.add(@"sender=$(sender.get_id()) avail=$upload_available limit=$size_limit can_send=$can_send can_encrypt=$sender_can_encrypt");
+
+                if (can_send) {
+                    if (file_transfer.encryption == Encryption.NONE || sender_can_encrypt) {
                         file_sender = sender;
                         break;
                     } else {
@@ -134,8 +152,22 @@ public class FileManager : StreamInteractionModule, Object {
                 }
             }
 
+            // Fallback: if the conversation encryption has no compatible file encryptor,
+            // still allow sending the file unencrypted when a sender is available.
+            if (file_sender == null && file_transfer.encryption != Encryption.NONE) {
+                foreach (FileSender sender in file_senders) {
+                    if (yield sender.can_send(conversation, file_transfer)) {
+                        file_sender = sender;
+                        file_transfer.encryption = Encryption.NONE;
+                        file_meta.encryption = Encryption.NONE;
+                        break;
+                    }
+                }
+            }
+
             if (file_sender == null) {
-                throw new FileSendError.UPLOAD_FAILED("No sender/encryptor combination available");
+                string diagnostics = string.joinv(" | ", sender_diagnostics.to_array());
+                throw new FileSendError.UPLOAD_FAILED(@"No sender/encryptor combination available (conversation_type=$(conversation.type_.to_string()), encryption=$(file_transfer.encryption.to_string()), file_size=$(file_transfer.size), diagnostics=$diagnostics)");
             }
 
             if (file_encryptor != null) {
@@ -292,19 +324,36 @@ public class FileManager : StreamInteractionModule, Object {
 
             // Save file
             string filename = Random.next_int().to_string("%x") + "_" + file_transfer.file_name;
-            File file = File.new_for_path(Path.build_filename(get_storage_dir(), filename));
+            string downloads_dir = get_downloads_dir();
+            DirUtils.create_with_parents(downloads_dir, 0700);
+            File file = File.new_for_path(Path.build_filename(downloads_dir, filename));
 
             // libsoup doesn't properly support splicing
             OutputStream os = file.create(FileCreateFlags.REPLACE_DESTINATION);
             uint8[] buffer = new uint8[1024];
             ssize_t read;
+            int64 bytes_written = 0;
             while ((read = yield input_stream.read_async(buffer, Priority.LOW, file_transfer.cancellable)) > 0) {
-                buffer.length = (int) read;
-                yield os.write_async(buffer, Priority.LOW, file_transfer.cancellable);
+                int offset = 0;
+                while (offset < read) {
+                    ssize_t wrote = yield os.write_async(buffer[offset:read], Priority.LOW, file_transfer.cancellable);
+                    if (wrote <= 0) {
+                        throw new IOError.FAILED("Failed to write downloaded file data");
+                    }
+                    offset += (int) wrote;
+                    bytes_written += wrote;
+                }
                 buffer.length = 1024;
             }
             yield input_stream.close_async(Priority.LOW, file_transfer.cancellable);
             yield os.close_async(Priority.LOW, file_transfer.cancellable);
+
+            if (file_meta.size > 0 && bytes_written < file_meta.size) {
+                warning("Incomplete file download: expected=%lld wrote=%lld file=%s", file_meta.size, bytes_written, file_transfer.file_name);
+                FileUtils.remove(file.get_path());
+                file_transfer.state = FileTransfer.State.FAILED;
+                return;
+            }
 
             // Verify the hash of the downloaded file, if it is known
             var supported_hashes = Xep.CryptographicHashes.get_supported_hashes(file_transfer.hashes);
@@ -329,7 +378,7 @@ public class FileManager : StreamInteractionModule, Object {
                 }
             }
 
-            file_transfer.path = file.get_basename();
+            file_transfer.path = file.get_path();
 
             FileInfo file_info = file_transfer.get_file().query_info("*", FileQueryInfoFlags.NONE);
             if (file_info.get_content_type() != "application/octet-stream" || file_transfer.content_type == null) {

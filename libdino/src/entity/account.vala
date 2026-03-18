@@ -21,6 +21,20 @@ public class Account : Object {
     public string? alias { get; set; }
     public bool enabled { get; set; default = false; }
     public string? roster_version { get; set; }
+    private bool allow_invalid_tls_certificate_ = false;
+    public bool allow_invalid_tls_certificate {
+        get { return allow_invalid_tls_certificate_; }
+        set {
+            allow_invalid_tls_certificate_ = value;
+            if (db != null && id > 0) {
+                db.account_settings.upsert()
+                        .value(db.account_settings.key, "allow-invalid-tls-certificate", true)
+                        .value(db.account_settings.account_id, id, true)
+                        .value(db.account_settings.value, value.to_string())
+                        .perform();
+            }
+        }
+    }
 
     private Database? db;
 
@@ -42,6 +56,8 @@ public class Account : Object {
         alias = row[db.account.alias];
         enabled = row[db.account.enabled];
         roster_version = row[db.account.roster_version];
+        string? allow_invalid_tls = db.account_settings.get_value(id, "allow-invalid-tls-certificate");
+        allow_invalid_tls_certificate_ = allow_invalid_tls != null ? bool.parse(allow_invalid_tls) : false;
 
         notify.connect(on_update);
     }
@@ -58,6 +74,12 @@ public class Account : Object {
                 .value(db.account.enabled, enabled)
                 .value(db.account.roster_version, roster_version)
                 .perform();
+
+        db.account_settings.upsert()
+            .value(db.account_settings.key, "allow-invalid-tls-certificate", true)
+            .value(db.account_settings.account_id, id, true)
+            .value(db.account_settings.value, allow_invalid_tls_certificate_.to_string())
+            .perform();
 
         notify.connect(on_update);
     }

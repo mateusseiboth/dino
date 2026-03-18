@@ -148,6 +148,13 @@ public class ConversationItemSkeleton : Plugins.ConversationItemWidgetInterface,
         Application app = GLib.Application.get_default() as Application;
 
         ContentMetaItem ci = item as ContentMetaItem;
+        if (item.encryption == Encryption.UNKNOWN) {
+            encryption_image.icon_name = "dino-changes-prevent-symbolic";
+            encryption_image.tooltip_text = Util.string_if_tooltips_active(_("Encrypted (AES)"));
+            encryption_image.visible = true;
+            return;
+        }
+
         if (item.encryption != Encryption.NONE && item.encryption != Encryption.UNKNOWN && ci != null) {
             string? icon_name = null;
             var encryption_entry = app.plugin_registry.encryption_list_entries[item.encryption];

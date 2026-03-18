@@ -140,6 +140,7 @@ public class MessageProcessor : StreamInteractionModule, Object {
     public async Entities.Message parse_message_stanza(Account account, Xmpp.MessageStanza message) {
         string? body = message.body;
         if (body != null) body = body.strip();
+        if (body != null) body = TextCrypto.decrypt_text_if_needed(body);
         Entities.Message new_message = new Entities.Message(body);
         new_message.account = account;
         new_message.stanza_id = Xep.UniqueStableStanzaIDs.get_origin_id(message) ?? message.id;
@@ -415,7 +416,15 @@ public class MessageProcessor : StreamInteractionModule, Object {
 
         MessageStanza new_message = new MessageStanza(message.stanza_id);
         new_message.to = message.counterpart;
-        new_message.body = message.body;
+        if (message.body != null) {
+            if (message.encryption == Encryption.UNKNOWN) {
+                new_message.body = TextCrypto.encrypt_text(message.body);
+            } else {
+                new_message.body = message.body;
+            }
+        } else {
+            new_message.body = null;
+        }
         if (conversation.type_ == Conversation.Type.GROUPCHAT) {
             new_message.type_ = MessageStanza.TYPE_GROUPCHAT;
         } else {

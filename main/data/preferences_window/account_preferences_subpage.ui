@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-  <requires lib="gtk" version="4.0"/>
+  <requires lib="gtk" version="4.0" />
   <template class="DinoUiAccountPreferencesSubpage">
     <child>
       <object class="GtkBox">
@@ -8,14 +8,14 @@
         <child>
           <object class="AdwHeaderBar" id="headerbar">
             <style>
-              <class name="flat"/>
+              <class name="flat" />
             </style>
           </object>
         </child>
         <child>
           <object class="GtkScrolledWindow">
-            <property name="vexpand">True</property>
-            <property name="hexpand">True</property>
+            <property name="vexpand">true</property>
+            <property name="hexpand">true</property>
             <child>
               <object class="AdwClamp">
                 <child>
@@ -43,9 +43,9 @@
                             <property name="halign">end</property>
                             <property name="valign">end</property>
                             <style>
-                              <class name="card"/>
-                              <class name="toolbar"/>
-                              <class name="compact-card-toolbar"/>
+                              <class name="card" />
+                              <class name="toolbar" />
+                              <class name="compact-card-toolbar" />
                             </style>
                             <child>
                               <object class="GtkButton" id="edit_avatar_button">
@@ -66,9 +66,9 @@
                         <child>
                           <object class="AdwActionRow" id="xmpp_address">
                             <property name="title" translatable="yes">XMPP Address</property>
-                            <property name="subtitle_selectable">True</property>
+                            <property name="subtitle_selectable">true</property>
                             <style>
-                              <class name="property"/>
+                              <class name="property" />
                             </style>
                           </object>
                         </child>
@@ -103,15 +103,22 @@
                           <object class="AdwActionRow" id="connection_status">
                             <property name="title" translatable="yes">Connection status</property>
                             <style>
-                              <class name="property"/>
+                              <class name="property" />
                             </style>
                             <child type="suffix">
                               <object class="GtkButton" id="enter_password_button">
                                 <property name="label">Enter password</property>
                                 <property name="valign">center</property>
-                                <property name="visible">False</property>
+                                <property name="visible">false</property>
                               </object>
                             </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="AdwSwitchRow" id="allow_invalid_tls_certificate">
+                            <property name="title" translatable="yes">Allow insecure connection</property>
+                            <property name="subtitle" translatable="yes">Insecure: allows invalid
+                              certificates and plaintext (no STARTTLS)</property>
                           </object>
                         </child>
                       </object>
@@ -125,7 +132,7 @@
                             <property name="label" translatable="1">Disable account</property>
                             <property name="halign">center</property>
                             <style>
-                              <class name="pill"/>
+                              <class name="pill" />
                             </style>
                           </object>
                         </child>
@@ -134,8 +141,8 @@
                             <property name="label" translatable="1">Remove account</property>
                             <property name="halign">center</property>
                             <style>
-                              <class name="pill"/>
-                              <class name="destructive-action"/>
+                              <class name="pill" />
+                              <class name="destructive-action" />
                             </style>
                           </object>
                         </child>

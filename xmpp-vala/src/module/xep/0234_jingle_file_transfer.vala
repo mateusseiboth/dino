@@ -62,7 +62,15 @@ public class Module : Jingle.ContentType, XmppStreamModule {
 
         Jingle.Transport? transport = yield jingle_module.select_transport(stream, required_transport_type, required_components, receiver_full_jid, Set.empty());
         if (transport == null) {
-            throw new Jingle.Error.NO_SHARED_PROTOCOLS("No suitable transports");
+            // Fallback for peers/servers with incomplete capability advertisement.
+            transport = jingle_module.get_transport("urn:xmpp:jingle:transports:ibb:1");
+            if (transport == null) {
+                transport = jingle_module.get_transport("urn:xmpp:jingle:transports:s5b:1");
+            }
+            if (transport == null) {
+                throw new Jingle.Error.NO_SHARED_PROTOCOLS("No suitable transports");
+            }
+            warning("Jingle transport fallback in use: %s", transport.ns_uri);
         }
         Jingle.SecurityPrecondition? precondition = jingle_module.get_security_precondition(precondition_name);
         if (precondition_name != null && precondition == null) {

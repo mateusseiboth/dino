@@ -48,8 +48,9 @@ public class View : Box {
     }
 
     public void set_file_upload_active(bool active) {
-        file_button.visible = active;
-        file_separator.visible = active;
+        file_button.visible = true;
+        file_button.sensitive = true;
+        file_separator.visible = true;
     }
 
     public void initialize_for_conversation(Conversation conversation) {

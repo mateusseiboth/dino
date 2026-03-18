@@ -11,6 +11,7 @@ public class Settings : Object {
         send_marker_ = col_to_bool_or_default("send_marker", true);
         notifications_ = col_to_bool_or_default("notifications", true);
         convert_utf8_smileys_ = col_to_bool_or_default("convert_utf8_smileys", true);
+        dark_theme_ = col_to_bool_or_default("dark_theme", true);
         check_spelling = col_to_bool_or_default("check_spelling", true);
     }
 
@@ -64,6 +65,18 @@ public class Settings : Object {
                     .value(db.settings.value, value.to_string())
                     .perform();
             convert_utf8_smileys_ = value;
+        }
+    }
+
+    private bool dark_theme_;
+    public bool dark_theme {
+        get { return dark_theme_; }
+        set {
+            db.settings.upsert()
+                    .value(db.settings.key, "dark_theme", true)
+                    .value(db.settings.value, value.to_string())
+                    .perform();
+            dark_theme_ = value;
         }
     }
 

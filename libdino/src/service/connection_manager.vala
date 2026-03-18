@@ -201,7 +201,8 @@ public class ConnectionManager : Object {
 
             change_connection_state(account, ConnectionState.CONNECTING);
             stream_result = yield Xmpp.establish_stream(account.bare_jid, module_manager.get_modules(account), log_options,
-                    (peer_cert, errors) => { return on_invalid_certificate(account.domainpart, peer_cert, errors); }
+                    (peer_cert, errors) => { return on_invalid_certificate(account.domainpart, peer_cert, errors, account.allow_invalid_tls_certificate); },
+                    account.allow_invalid_tls_certificate
             );
             connections[account].stream = stream_result.stream;
 
@@ -382,7 +383,11 @@ public class ConnectionManager : Object {
         connection_error(account, error);
     }
 
-    public static bool on_invalid_certificate(string domain, TlsCertificate peer_cert, TlsCertificateFlags errors) {
+    public static bool on_invalid_certificate(string domain, TlsCertificate peer_cert, TlsCertificateFlags errors, bool allow_invalid_tls_certificate = false) {
+        if (allow_invalid_tls_certificate) {
+            warning("Accepting invalid TLS certificate for account configured to skip certificate validation (%s)", domain);
+            return true;
+        }
         if (domain.has_suffix(".onion") && errors == TlsCertificateFlags.UNKNOWN_CA) {
             // It's barely possible for .onion servers to provide a non-self-signed cert.
             // But that's fine because encryption is provided independently though TOR.
