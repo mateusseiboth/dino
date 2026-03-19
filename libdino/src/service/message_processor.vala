@@ -140,10 +140,14 @@ public class MessageProcessor : StreamInteractionModule, Object {
     public async Entities.Message parse_message_stanza(Account account, Xmpp.MessageStanza message) {
         string? body = message.body;
         if (body != null) body = body.strip();
+        bool was_aes_encrypted = body != null && TextCrypto.is_encrypted_payload(body);
         if (body != null) body = TextCrypto.decrypt_text_if_needed(body);
         Entities.Message new_message = new Entities.Message(body);
         new_message.account = account;
         new_message.stanza_id = Xep.UniqueStableStanzaIDs.get_origin_id(message) ?? message.id;
+        if (was_aes_encrypted) {
+            new_message.encryption = Encryption.UNKNOWN;
+        }
 
         Jid? counterpart_override = null;
         if (message.from.equals(stream_interactor.get_module(MucManager.IDENTITY).get_own_jid(message.from.bare_jid, account))) {

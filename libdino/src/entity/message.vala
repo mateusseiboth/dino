@@ -116,6 +116,14 @@ public class Message : Object {
         quoted_item_id = row[db.reply.quoted_content_item_id];
 
         notify.connect(on_update);
+
+        // Decrypt AES-encrypted messages loaded from database (e.g. received offline or via MAM)
+        if (body != null && TextCrypto.is_encrypted_payload(body)) {
+            body = TextCrypto.decrypt_text_if_needed(body);
+            if (encryption == Encryption.NONE) {
+                encryption = Encryption.UNKNOWN;
+            }
+        }
     }
 
     public void persist(Database db) {

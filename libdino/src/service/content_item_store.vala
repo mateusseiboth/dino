@@ -11,6 +11,7 @@ public class ContentItemStore : StreamInteractionModule, Object {
     public string id { get { return IDENTITY.id; } }
 
     public signal void new_item(ContentItem item, Conversation conversation);
+    public signal void dino_event_received(string event_name, Conversation conversation);
 
     private StreamInteractor stream_interactor;
     private Database db;
@@ -274,8 +275,15 @@ public class ContentItemStore : StreamInteractionModule, Object {
     }
 
     public void insert_message(Message message, Conversation conversation, bool hide = false) {
+        if (DinoEvent.is_event_message(message.body)) {
+            hide = true;
+        }
         MessageItem item = new MessageItem(message, conversation, -1);
         item.id = db.add_content_item(conversation, message.time, message.local_time, 1, message.id, hide);
+        if (message.body != null && DinoEvent.is_event_message(message.body)) {
+            string event_name = DinoEvent.decode_event(message.body).to_string();
+            dino_event_received(event_name, conversation);
+        }
     }
 
     private void announce_message(Message message, Conversation conversation) {

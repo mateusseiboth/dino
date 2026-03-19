@@ -182,6 +182,12 @@ public class ChatInputController : Object {
                 case "/topic":
                     stream_interactor.get_module(MucManager.IDENTITY).change_subject(conversation.account, conversation.counterpart, token[1]);
                     return;
+                case "/party":
+                case "/space":
+                case "/attention":
+                    string event_body = DinoEvent.encode_event(DinoEvent.EventType.from_string(token[0].substring(1)));
+                    Dino.send_message(conversation, event_body, 0, null, new Gee.ArrayList<Xmpp.Xep.MessageMarkup.Span>());
+                    return;
                 default:
                     if (token[0].has_prefix("//")) {
                         text = text.substring(1);

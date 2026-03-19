@@ -37,6 +37,16 @@ public class ConversationViewController : Object {
 
         view.conversation_frame.init(stream_interactor);
 
+        // Initialize effects overlay
+        view.init_effects();
+
+        // Connect dino event signal for visual effects
+        stream_interactor.get_module(ContentItemStore.IDENTITY).dino_event_received.connect((event_name, conv) => {
+            if (conversation != null && conversation.equals(conv)) {
+                trigger_effect(event_name);
+            }
+        });
+
         // drag 'n drop file upload
         drop_event_controller.on_drop.connect(this.on_drag_data_received);
 
@@ -278,6 +288,20 @@ public class ConversationViewController : Object {
         }
 
         return key_controller.forward(view.chat_input.chat_text_view.text_view);
+    }
+
+    private void trigger_effect(string event_name) {
+        switch (event_name) {
+            case "party":
+                view.effects_overlay.trigger_party();
+                break;
+            case "space":
+                view.effects_overlay.trigger_space();
+                break;
+            case "attention":
+                view.effects_overlay.trigger_attention();
+                break;
+        }
     }
 }
 }

@@ -25,7 +25,11 @@ namespace Dino.Ui {
         public async void notify_message(Message message, Conversation conversation, string conversation_display_name, string? participant_display_name) {
             if (is_windows_notification()) {
                 string sender = participant_display_name ?? conversation_display_name;
-                send_windows_toast(sender);
+                string body = message.body ?? "";
+                if (participant_display_name != null) {
+                    body = @"$participant_display_name: $body";
+                }
+                send_windows_toast(conversation_display_name, body);
                 return;
             }
 
@@ -38,8 +42,16 @@ namespace Dino.Ui {
 
         public async void notify_file(FileTransfer file_transfer, Conversation conversation, bool is_image, string conversation_display_name, string? participant_display_name) {
             if (is_windows_notification()) {
-                string sender = participant_display_name ?? conversation_display_name;
-                send_windows_toast(sender);
+                string text = "";
+                if (file_transfer.direction == Message.DIRECTION_SENT) {
+                    text = is_image ? _("Image sent") : _("File sent");
+                } else {
+                    text = is_image ? _("Image received") : _("File received");
+                }
+                if (participant_display_name != null) {
+                    text = @"$participant_display_name: $text";
+                }
+                send_windows_toast(conversation_display_name, text);
                 return;
             }
 
@@ -202,7 +214,7 @@ namespace Dino.Ui {
             return Environment.get_variable("WINDIR") != null || Environment.get_variable("OS") == "Windows_NT";
         }
 
-        private void send_windows_toast(string title) {
+        private void send_windows_toast(string title, string body = "") {
             string exe_dir = Environment.get_variable("DINO_BUNDLE_DIR") ?? ".";
             string toast_exe = Path.build_filename(exe_dir, "dino-toast.exe");
 
@@ -218,7 +230,12 @@ namespace Dino.Ui {
             }
 
             try {
-                string[] argv = { toast_exe, title };
+                string[] argv;
+                if (body != "") {
+                    argv = { toast_exe, title, body };
+                } else {
+                    argv = { toast_exe, title };
+                }
                 Process.spawn_async(null, argv, null, SpawnFlags.DO_NOT_REAP_CHILD, null, null);
             } catch (Error e) {
                 warning("Failed to spawn dino-toast: %s", e.message);
