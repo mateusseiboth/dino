@@ -158,7 +158,16 @@ public static Regex get_url_regex() {
     }
     return URL_REGEX;
 }
-
+public static Regex get_code_block_regex() {
+    if (CODE_BLOCK_REGEX == null) {
+        try {
+            CODE_BLOCK_REGEX = new Regex("```(\\w*)\\n(.*?)```", RegexCompileFlags.DOTALL);
+        } catch (RegexError e) {
+            assert_not_reached();
+        }
+    }
+    return CODE_BLOCK_REGEX;
+}
 public static Map<unichar, unichar> get_matching_chars() {
     if (MATCHING_CHARS == null) {
         MATCHING_CHARS = new HashMap<unichar, unichar>();

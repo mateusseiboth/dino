@@ -30,6 +30,8 @@ public class MessageMetaItem : ContentMetaItem {
     uint pending_timeout_id = -1;
 
     public Label label = new Label("") { use_markup=true, xalign=0, selectable=true, wrap=true, wrap_mode=Pango.WrapMode.WORD_CHAR, hexpand=true, vexpand=true };
+    private Box? content_box = null;
+    private Widget active_widget = null;
 
     public MessageMetaItem(ContentItem content_item, StreamInteractor stream_interactor) {
         base(content_item);
@@ -201,7 +203,168 @@ public class MessageMetaItem : ContentMetaItem {
     }
 
     public void update_label() {
-        generate_markup_text(content_item, label);
+        build_message_widget(content_item);
+    }
+
+    private bool message_has_code_blocks(string body) {
+        MatchInfo match_info;
+        Util.get_code_block_regex().match(body, 0, out match_info);
+        return match_info.matches();
+    }
+
+    private void build_message_widget(ContentItem item) {
+        MessageItem message_item = item as MessageItem;
+        Message message = message_item.message;
+        string body = message.body;
+        if (body == null) body = "";
+
+        bool dark_theme = Util.is_dark_theme(this.label);
+
+        if (!message_has_code_blocks(body)) {
+            // Simple message: just use the label
+            generate_markup_text(item, label);
+            if (active_widget != label) {
+                active_widget = label;
+                if (outer != null) outer.set_widget(label, Plugins.WidgetType.GTK4, 2);
+            }
+            return;
+        }
+
+        // Message with code blocks: build composite widget
+        if (content_box != null) {
+            // Remove old children
+            Widget? child = content_box.get_first_child();
+            while (child != null) {
+                Widget? next = child.get_next_sibling();
+                content_box.remove(child);
+                child = next;
+            }
+        } else {
+            content_box = new Box(Orientation.VERTICAL, 6) { hexpand = true };
+        }
+
+        // Pre-process: get clean body (with fallback removal)
+        var markups = new ArrayList<Xep.MessageMarkup.Span>();
+        foreach (var markup in message.get_markups()) {
+            markups.add(new Xep.MessageMarkup.Span() { types=markup.types, start_char=markup.start_char, end_char=markup.end_char });
+        }
+        string processed_body = body;
+        if (processed_body.length > 10000) {
+            processed_body = processed_body.substring(0, 10000) + " [" + _("Message too long") + "]";
+        }
+        processed_body = Util.remove_fallbacks_adjust_markups(processed_body, message.quoted_item_id > 0, message.get_fallbacks(), markups);
+
+        Conversation conversation = message_item.conversation;
+        bool theme_dependent = false;
+
+        // Split by code blocks
+        string remaining = processed_body;
+        MatchInfo match_info;
+        while (Util.get_code_block_regex().match(remaining, 0, out match_info) && match_info.matches()) {
+            int start, end;
+            match_info.fetch_pos(0, out start, out end);
+            string lang = match_info.fetch(1) ?? "";
+            string code_content = match_info.fetch(2) ?? "";
+
+            // Text before code block
+            string before = remaining[0:start];
+            if (before.strip().length > 0) {
+                var text_label = create_text_label();
+                string before_markup = Util.unbreak_space_around_non_spacing_mark((owned) before);
+                if (conversation.type_ == Conversation.Type.GROUPCHAT) {
+                    before_markup = Util.parse_add_markup_theme(before_markup, conversation.nickname, true, true, true, dark_theme, ref theme_dependent);
+                } else {
+                    before_markup = Util.parse_add_markup_theme(before_markup, null, true, true, true, dark_theme, ref theme_dependent);
+                }
+                text_label.label = before_markup;
+                content_box.append(text_label);
+            }
+
+            // Code block widget
+            var code_widget = new CodeBlockWidget(code_content, lang, dark_theme);
+            content_box.append(code_widget);
+
+            remaining = remaining[end:remaining.length];
+        }
+
+        // Remaining text after last code block
+        if (remaining.strip().length > 0) {
+            var text_label = create_text_label();
+            string after_markup = Util.unbreak_space_around_non_spacing_mark((owned) remaining);
+            if (conversation.type_ == Conversation.Type.GROUPCHAT) {
+                after_markup = Util.parse_add_markup_theme(after_markup, conversation.nickname, true, true, true, dark_theme, ref theme_dependent);
+            } else {
+                after_markup = Util.parse_add_markup_theme(after_markup, null, true, true, true, dark_theme, ref theme_dependent);
+            }
+
+            // Append status suffixes to last text label
+            string dim_color = dark_theme ? "#BDBDBD" : "#707070";
+            additional_info = AdditionalInfo.NONE;
+            if (message.body == "") {
+                after_markup = @"<i><span size='small' color='$dim_color'>%s</span></i>".printf(_("Message deleted"));
+                theme_dependent = true;
+            }
+            if (message.edit_to != null) {
+                after_markup += @"  <span size='small' color='$dim_color'>(%s)</span>".printf(_("edited"));
+                theme_dependent = true;
+            }
+            if (message.direction == Message.DIRECTION_SENT && (message.marked == Message.Marked.SENDING || message.marked == Message.Marked.UNSENT)) {
+                if (message.time.compare(new DateTime.now_utc().add_seconds(-10)) < 0) {
+                    after_markup += @"  <span size='small' color='$dim_color'>%s</span>".printf(_("pending\u2026"));
+                    theme_dependent = true;
+                    additional_info = AdditionalInfo.PENDING;
+                }
+            } else if (message.direction == Message.DIRECTION_SENT && message.marked == Message.Marked.ERROR) {
+                string error_color = Util.rgba_to_hex(Util.get_label_pango_color(text_label, "@error_color"));
+                after_markup += "  <span size='small' color='%s'>%s</span>".printf(error_color, _("delivery failed"));
+                theme_dependent = true;
+                additional_info = AdditionalInfo.DELIVERY_FAILED;
+            }
+
+            text_label.label = after_markup;
+            content_box.append(text_label);
+        } else {
+            // No trailing text but may need status - add tiny status label
+            string dim_color = dark_theme ? "#BDBDBD" : "#707070";
+            string status_markup = "";
+            additional_info = AdditionalInfo.NONE;
+            if (message.body == "") {
+                status_markup = @"<i><span size='small' color='$dim_color'>%s</span></i>".printf(_("Message deleted"));
+            }
+            if (message.edit_to != null) {
+                status_markup += @"  <span size='small' color='$dim_color'>(%s)</span>".printf(_("edited"));
+            }
+            if (message.direction == Message.DIRECTION_SENT && message.marked == Message.Marked.ERROR) {
+                string error_color = "#CC0000";
+                status_markup += "  <span size='small' color='%s'>%s</span>".printf(error_color, _("delivery failed"));
+                additional_info = AdditionalInfo.DELIVERY_FAILED;
+            }
+            if (status_markup.length > 0) {
+                var status_label = create_text_label();
+                status_label.label = status_markup;
+                content_box.append(status_label);
+            }
+        }
+
+        if (theme_dependent && realize_id == -1) {
+            realize_id = label.realize.connect(update_label);
+        }
+
+        active_widget = content_box;
+        if (outer != null) outer.set_widget(content_box, Plugins.WidgetType.GTK4, 2);
+    }
+
+    private Label create_text_label() {
+        var l = new Label("") {
+            use_markup = true,
+            xalign = 0,
+            selectable = true,
+            wrap = true,
+            wrap_mode = Pango.WrapMode.WORD_CHAR,
+            hexpand = true
+        };
+        l.activate_link.connect(on_label_activate_link);
+        return l;
     }
 
     public override Object? get_widget(Plugins.ConversationItemWidgetInterface outer, Plugins.WidgetType type) {
@@ -209,7 +372,8 @@ public class MessageMetaItem : ContentMetaItem {
 
         this.notify["in-edit-mode"].connect(on_in_edit_mode_changed);
 
-        outer.set_widget(label, Plugins.WidgetType.GTK4, 2);
+        build_message_widget(content_item);
+        // active_widget was set by build_message_widget
 
         if (message_item.message.quoted_item_id > 0) {
             var quoted_content_item = stream_interactor.get_module(ContentItemStore.IDENTITY).get_item_by_id(message_item.conversation, message_item.message.quoted_item_id);
@@ -222,7 +386,7 @@ public class MessageMetaItem : ContentMetaItem {
                 outer.set_widget(quote_widget, Plugins.WidgetType.GTK4, 1);
             }
         }
-        return label;
+        return active_widget;
     }
 
     public override Gee.List<Plugins.MessageAction>? get_item_actions(Plugins.WidgetType type) {
@@ -266,7 +430,7 @@ public class MessageMetaItem : ContentMetaItem {
 
             edit_mode.cancelled.connect(() => {
                 in_edit_mode = false;
-                outer.set_widget(label, Plugins.WidgetType.GTK4, 2);
+                build_message_widget(content_item);
             });
             edit_mode.send.connect(() => {
                 string text = edit_mode.chat_text_view.text_view.buffer.text;
@@ -274,7 +438,7 @@ public class MessageMetaItem : ContentMetaItem {
                 Dino.send_message(message_item.conversation, text, message_item.message.quoted_item_id, message_item.message, markups);
 
                 in_edit_mode = false;
-                outer.set_widget(label, Plugins.WidgetType.GTK4, 2);
+                build_message_widget(content_item);
             });
 
             edit_mode.chat_text_view.set_text(message);
@@ -320,6 +484,12 @@ public class MessageMetaItem : ContentMetaItem {
             label.dispose();
             label = null;
         }
+        if (content_box != null) {
+            content_box.unparent();
+            content_box.dispose();
+            content_box = null;
+        }
+        active_widget = null;
         base.dispose();
     }
 }
