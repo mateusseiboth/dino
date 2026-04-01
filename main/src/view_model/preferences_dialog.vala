@@ -112,6 +112,8 @@ public class Dino.Ui.ViewModel.PreferencesDialog : Object {
         settings.bind_property("notifications", general_page, "notifications", BindingFlags.SYNC_CREATE | BindingFlags.BIDIRECTIONAL);
         settings.bind_property("convert-utf8-smileys", general_page, "convert-emojis", BindingFlags.SYNC_CREATE | BindingFlags.BIDIRECTIONAL);
         settings.bind_property("dark-theme", general_page, "dark-theme", BindingFlags.SYNC_CREATE | BindingFlags.BIDIRECTIONAL);
+        settings.bind_property("vacation-notice-enabled", general_page, "vacation-notice-enabled", BindingFlags.SYNC_CREATE | BindingFlags.BIDIRECTIONAL);
+        settings.bind_property("vacation-notice-message", general_page, "vacation-notice-message", BindingFlags.SYNC_CREATE | BindingFlags.BIDIRECTIONAL);
     }
 }
 

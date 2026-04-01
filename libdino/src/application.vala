@@ -61,6 +61,7 @@ public interface Application : GLib.Application {
         ContactModels.start(stream_interactor);
         MessageDeletion.start(stream_interactor, db);
         StatelessFileSharing.start(stream_interactor, db);
+        VacationNotice.start(stream_interactor, db);
 
         create_actions();
 

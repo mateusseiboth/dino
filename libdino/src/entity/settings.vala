@@ -13,11 +13,18 @@ public class Settings : Object {
         convert_utf8_smileys_ = col_to_bool_or_default("convert_utf8_smileys", true);
         dark_theme_ = col_to_bool_or_default("dark_theme", true);
         check_spelling = col_to_bool_or_default("check_spelling", true);
+        vacation_notice_enabled_ = col_to_bool_or_default("vacation_notice_enabled", false);
+        vacation_notice_message_ = col_to_str_or_default("vacation_notice_message", "");
     }
 
     private bool col_to_bool_or_default(string key, bool def) {
         string? val = db.settings.select({db.settings.value}).with(db.settings.key, "=", key)[db.settings.value];
         return val != null ? bool.parse(val) : def;
+    }
+
+    private string col_to_str_or_default(string key, string def) {
+        string? val = db.settings.select({db.settings.value}).with(db.settings.key, "=", key)[db.settings.value];
+        return val ?? def;
     }
 
     private bool send_typing_;
@@ -109,6 +116,30 @@ public class Settings : Object {
                 .perform();
 
 
+    }
+
+    private bool vacation_notice_enabled_;
+    public bool vacation_notice_enabled {
+        get { return vacation_notice_enabled_; }
+        set {
+            db.settings.upsert()
+                    .value(db.settings.key, "vacation_notice_enabled", true)
+                    .value(db.settings.value, value.to_string())
+                    .perform();
+            vacation_notice_enabled_ = value;
+        }
+    }
+
+    private string vacation_notice_message_;
+    public string vacation_notice_message {
+        get { return vacation_notice_message_; }
+        set {
+            db.settings.upsert()
+                    .value(db.settings.key, "vacation_notice_message", true)
+                    .value(db.settings.value, value)
+                    .perform();
+            vacation_notice_message_ = value;
+        }
     }
 }
 

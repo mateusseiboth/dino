@@ -46,5 +46,24 @@
         </child>
       </object>
     </child>
+    <child>
+      <object class="AdwPreferencesGroup">
+        <property name="title" translatable="yes">Vacation Notice</property>
+        <child>
+          <object class="AdwSwitchRow" id="vacation_notice_row">
+            <property name="title" translatable="yes">_Enable Vacation Notice</property>
+            <property name="subtitle" translatable="yes">Auto-reply to incoming messages with the
+              text below</property>
+            <property name="use-underline">True</property>
+          </object>
+        </child>
+        <child>
+          <object class="AdwEntryRow" id="vacation_message_row">
+            <property name="title" translatable="yes">Vacation message</property>
+            <property name="sensitive">False</property>
+          </object>
+        </child>
+      </object>
+    </child>
   </template>
 </interface>

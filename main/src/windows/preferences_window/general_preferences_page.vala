@@ -6,6 +6,8 @@ public class Dino.Ui.ViewModel.GeneralPreferencesPage : Object {
     public bool notifications { get; set; }
     public bool convert_emojis { get; set; }
     public bool dark_theme { get; set; }
+    public bool vacation_notice_enabled { get; set; }
+    public string vacation_notice_message { get; set; default = ""; }
 }
 
 [GtkTemplate (ui = "/im/dino/Dino/preferences_window/general_preferences_page.ui")]
@@ -15,6 +17,8 @@ public class Dino.Ui.GeneralPreferencesPage : Adw.PreferencesPage {
     [GtkChild] private unowned Adw.SwitchRow notification_row;
     [GtkChild] private unowned Adw.SwitchRow emoji_row;
     [GtkChild] private unowned Adw.SwitchRow dark_theme_row;
+    [GtkChild] private unowned Adw.SwitchRow vacation_notice_row;
+    [GtkChild] private unowned Adw.EntryRow vacation_message_row;
 
     public ViewModel.GeneralPreferencesPage model { get; set; default = new ViewModel.GeneralPreferencesPage(); }
     private Binding[] model_bindings = new Binding[0];
@@ -33,8 +37,11 @@ public class Dino.Ui.GeneralPreferencesPage : Adw.PreferencesPage {
                 model.bind_property("send-marker", marker_row, "active", BindingFlags.SYNC_CREATE | BindingFlags.BIDIRECTIONAL),
                 model.bind_property("notifications", notification_row, "active", BindingFlags.SYNC_CREATE | BindingFlags.BIDIRECTIONAL),
                 model.bind_property("convert-emojis", emoji_row, "active", BindingFlags.SYNC_CREATE | BindingFlags.BIDIRECTIONAL),
-                model.bind_property("dark-theme", dark_theme_row, "active", BindingFlags.SYNC_CREATE | BindingFlags.BIDIRECTIONAL)
+                model.bind_property("dark-theme", dark_theme_row, "active", BindingFlags.SYNC_CREATE | BindingFlags.BIDIRECTIONAL),
+                model.bind_property("vacation-notice-enabled", vacation_notice_row, "active", BindingFlags.SYNC_CREATE | BindingFlags.BIDIRECTIONAL),
+                model.bind_property("vacation-notice-message", vacation_message_row, "text", BindingFlags.SYNC_CREATE | BindingFlags.BIDIRECTIONAL)
             };
+            model.bind_property("vacation-notice-enabled", vacation_message_row, "sensitive", BindingFlags.SYNC_CREATE);
         } else {
             model_bindings = new Binding[0];
         }
