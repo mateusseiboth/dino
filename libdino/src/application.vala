@@ -62,6 +62,7 @@ public interface Application : GLib.Application {
         MessageDeletion.start(stream_interactor, db);
         StatelessFileSharing.start(stream_interactor, db);
         VacationNotice.start(stream_interactor, db);
+        StickerManager.start(stream_interactor, db);
 
         create_actions();
 

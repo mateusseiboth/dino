@@ -51,6 +51,8 @@ public class ChatInputController : Object {
 
         chat_input.file_button.clicked.connect(() => file_picker_selected());
 
+        chat_input.sticker_picked.connect(on_sticker_picked);
+
         stream_interactor.get_module(MucManager.IDENTITY).received_occupant_role.connect(update_moderated_input_status);
         stream_interactor.get_module(MucManager.IDENTITY).room_info_updated.connect(update_moderated_input_status);
 
@@ -237,6 +239,13 @@ public class ChatInputController : Object {
             chat_input.do_focus();
         }
         return false;
+    }
+
+    private void on_sticker_picked(StickerEntry sticker) {
+        if (conversation == null) return;
+        StickerManager mgr = stream_interactor.get_module(StickerManager.IDENTITY);
+        if (mgr == null) return;
+        mgr.send_sticker(conversation, sticker);
     }
 }
 

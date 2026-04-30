@@ -22,12 +22,16 @@ public class View : Box {
     [GtkChild] public unowned Box quote_box;
     [GtkChild] public unowned ChatTextView chat_text_view;
     [GtkChild] public unowned Button file_button;
+    [GtkChild] public unowned MenuButton sticker_button;
     [GtkChild] public unowned MenuButton emoji_button;
     [GtkChild] public unowned MenuButton encryption_button;
     [GtkChild] public unowned Separator file_separator;
     [GtkChild] public unowned Label chat_input_status;
 
     public EncryptionButton encryption_widget;
+    public StickerPicker? sticker_picker { get; private set; }
+
+    public signal void sticker_picked(StickerEntry sticker);
 
     public View init(StreamInteractor stream_interactor) {
         this.stream_interactor = stream_interactor;
@@ -41,6 +45,14 @@ public class View : Box {
         chooser.closed.connect(do_focus);
 
         emoji_button.set_popover(chooser);
+
+        // Sticker picker – only set up when the StickerManager module is available
+        if (stream_interactor.get_module(StickerManager.IDENTITY) != null) {
+            sticker_picker = new StickerPicker(stream_interactor);
+            sticker_picker.sticker_selected.connect((s) => sticker_picked(s));
+            sticker_button.set_popover(sticker_picker);
+            sticker_button.visible = true;
+        }
 
         file_button.tooltip_text = Util.string_if_tooltips_active(_("Send a file"));
 

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+    <path
+        d="M8 1.5A6.5 6.5 0 0 0 1.5 8c0 1.46.484 2.808 1.297 3.887L11.887 2.797A6.469 6.469 0 0 0 8 1.5Zm3.887 1.613L2.797 12.113A6.5 6.5 0 0 0 14.5 8a6.47 6.47 0 0 0-2.613-5.887ZM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Z"
+        fill="currentColor" fill-rule="evenodd" />
+</svg>

@@ -65,6 +65,10 @@ public class ContentProvider : ContentItemCollection, Object {
 
     private ContentMetaItem create_content_meta_item(ContentItem content_item) {
         if (content_item.type_ == MessageItem.TYPE) {
+            MessageItem msg_item = content_item as MessageItem;
+            if (StickerMessage.is_sticker_message(msg_item.message.body)) {
+                return new StickerMetaItem(content_item, stream_interactor);
+            }
             return new MessageMetaItem(content_item, stream_interactor);
         } else if (content_item.type_ == FileItem.TYPE) {
             return new FileMetaItem(content_item, stream_interactor);

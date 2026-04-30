@@ -7,7 +7,7 @@ using Dino.Entities;
 namespace Dino {
 
 public class Database : Qlite.Database {
-    private const int VERSION = 31;
+    private const int VERSION = 33;
 
     public class AccountTable : Table {
         public Column<int> id = new Column.Integer("id") { primary_key = true, auto_increment = true };
@@ -449,6 +449,21 @@ public class Database : Qlite.Database {
         }
     }
 
+    public class StickerTable : Table {
+        public Column<int> id = new Column.Integer("id") { primary_key = true, auto_increment = true };
+        public Column<string> hash = new Column.Text("hash") { unique = true, not_null = true, min_version = 33 };
+        public Column<string> path = new Column.Text("path") { not_null = true, min_version = 33 };
+        public Column<string> name = new Column.Text("name") { min_version = 33 };
+        public Column<string> mime_type = new Column.Text("mime_type") { min_version = 33 };
+        public Column<long> file_size = new Column.Long("file_size") { default = "0", min_version = 33 };
+        public Column<string> cached_url = new Column.Text("cached_url") { min_version = 33 };
+
+        internal StickerTable(Database db) {
+            base(db, "sticker");
+            init({id, hash, path, name, mime_type, file_size, cached_url});
+        }
+    }
+
     public AccountTable account { get; private set; }
     public JidTable jid { get; private set; }
     public EntityTable entity { get; private set; }
@@ -476,6 +491,7 @@ public class Database : Qlite.Database {
     public SettingsTable settings { get; private set; }
     public AccountSettingsTable account_settings { get; private set; }
     public ConversationSettingsTable conversation_settings { get; private set; }
+    public StickerTable sticker { get; private set; }
 
     public Map<int, Jid> jid_table_cache = new HashMap<int, Jid>();
     public Map<Jid, int> jid_table_reverse = new HashMap<Jid, int>(Jid.hash_func, Jid.equals_func);
@@ -510,7 +526,8 @@ public class Database : Qlite.Database {
         settings = new SettingsTable(this);
         account_settings = new AccountSettingsTable(this);
         conversation_settings = new ConversationSettingsTable(this);
-        init({ account, jid, entity, content_item, message, message_occupant_id, body_meta, message_correction, reply, real_jid, occupantid, file_transfer, file_hashes, file_thumbnails, sfs_sources, call, call_counterpart, conversation, avatar, entity_identity, entity_feature, roster, mam_catchup, reaction, settings, account_settings, conversation_settings });
+        sticker = new StickerTable(this);
+        init({ account, jid, entity, content_item, message, message_occupant_id, body_meta, message_correction, reply, real_jid, occupantid, file_transfer, file_hashes, file_thumbnails, sfs_sources, call, call_counterpart, conversation, avatar, entity_identity, entity_feature, roster, mam_catchup, reaction, settings, account_settings, conversation_settings, sticker });
 
         try {
             exec("PRAGMA journal_mode = WAL");
@@ -641,6 +658,14 @@ public class Database : Qlite.Database {
 //                            SELECT id, account_id, our_resource, direction, time, local_time, end_time, encryption, state
 //                            FROM call2");
 //                exec("DROP TABLE call2");
+        }
+        if (oldVersion < 33) {
+            try {
+                exec("DROP TABLE IF EXISTS sticker");
+                sticker.create_table_at_version(VERSION);
+            } catch (Error e) {
+                error("Failed to upgrade to database version 33 (sticker): %s", e.message);
+            }
         }
         if (oldVersion < 23) {
             try {
