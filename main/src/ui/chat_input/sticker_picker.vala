@@ -22,20 +22,20 @@ public class StickerPicker : Gtk.Popover {
         this.sticker_manager = stream_interactor.get_module(StickerManager.IDENTITY);
 
         var vbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 6);
-        vbox.margin_top    = 8;
-        vbox.margin_bottom = 8;
-        vbox.margin_start  = 8;
-        vbox.margin_end    = 8;
+        vbox.margin_top    = 6;
+        vbox.margin_bottom = 6;
+        vbox.margin_start  = 6;
+        vbox.margin_end    = 6;
 
         // Scrollable sticker grid
         var scroll = new Gtk.ScrolledWindow();
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
-        scroll.width_request  = 300;
-        scroll.height_request = 240;
+        scroll.width_request  = 316;
+        scroll.height_request = 260;
 
         flow_box = new Gtk.FlowBox();
         flow_box.max_children_per_line = 4;
-        flow_box.min_children_per_line = 1;
+        flow_box.min_children_per_line = 4;
         flow_box.selection_mode = Gtk.SelectionMode.NONE;
         flow_box.homogeneous = true;
         flow_box.row_spacing = 4;
@@ -90,9 +90,11 @@ public class StickerPicker : Gtk.Popover {
     private void append_sticker_button(StickerEntry sticker) {
         var picture = new Gtk.Picture.for_filename(sticker.path);
         picture.content_fit = Gtk.ContentFit.CONTAIN;
-        picture.width_request  = 72;
-        picture.height_request = 72;
+        picture.width_request  = 64;
+        picture.height_request = 64;
         picture.can_shrink = true;
+        picture.hexpand = false;
+        picture.vexpand = false;
 
         // Delete overlay
         var overlay = new Gtk.Overlay();
@@ -113,6 +115,10 @@ public class StickerPicker : Gtk.Popover {
         btn.add_css_class("flat");
         btn.add_css_class("sticker-thumb-btn");
         btn.tooltip_text = sticker.name ?? sticker.hash.substring(0, 8);
+        btn.width_request  = 72;
+        btn.height_request = 72;
+        btn.hexpand = false;
+        btn.vexpand = false;
 
         // Send sticker on left click
         btn.clicked.connect(() => {
